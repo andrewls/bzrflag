@@ -447,7 +447,7 @@ class Answer(object):
     created this class just to keep things short and sweet.
 
     """
-    pass
+    print object
 
 
 class Command(object):
