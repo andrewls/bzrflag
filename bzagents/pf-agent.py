@@ -26,6 +26,9 @@ import time
 # from bzrflag.constants import FLAGRADIUS
 from bzrc import BZRC, Command
 
+sys.path.insert(0, "/Users/andrew/Code/school/470/bzrflag/potential")
+import show_field as graph
+
 FLAGRADIUS = 2.5
 FLAGSPREAD = 100
 
@@ -52,6 +55,34 @@ class Agent(object):
         self.obstacles = self.bzrc.get_obstacles()
         self.potential_fields = {}
 
+        def attractive_fields_func(x, y, res):
+            # determine how far from point to flags
+            # calculate attractive fields to closest flag
+            alpha = 0.9
+            closest_flag = None
+            distance = float("inf")
+            # find closest flag
+            for flag in self.flags:
+                if self.constants["team"] == flag.color:
+                    continue
+                distance_to_flag = math.sqrt((flag.x - x)**2 + (flag.y - y)**2)
+                if distance_to_flag < distance:
+                    distance = distance_to_flag
+                    closest_flag = flag
+            # get flag location
+            print "Getting flag %s" % closest_flag.color
+            # calculate angle between closest_flag and tank
+            angle = math.atan2(closest_flag.y - y, closest_flag.x - x)
+            # calculate dx and dy based off of distance and angle
+            if distance < FLAGRADIUS:
+                return 0,0
+            elif distance < FLAGRADIUS + FLAGSPREAD:
+                return alpha * (distance - FLAGRADIUS) * math.cos(angle), alpha * (distance - FLAGRADIUS) * math.sin(angle)
+            else:
+                return alpha * FLAGSPREAD * math.cos(angle), alpha * FLAGSPREAD * math.sin(angle)
+
+        self.attractive_fields_func = attractive_fields_func
+
         bases = self.bzrc.get_bases()
         for base in bases:
             if base.color == self.constants['team']:
@@ -60,9 +91,8 @@ class Agent(object):
         self.commands = []
 
         for tank in mytanks:
-            self.potential_fields[tank.index] = []
-            self.calculate_attractive_fields(tank, flags)
-            self.calculate_repulsive_fields(tank, self.obstacles, mytanks + othertanks)
+            self.potential_fields[tank.index] = self.calculate_attractive_fields(tank)
+            # self.calculate_repulsive_fields(tank, self.obstacles, mytanks + othertanks)
             self.calculate_tangential_fields()
 
         for key in self.potential_fields.keys():
@@ -82,9 +112,9 @@ class Agent(object):
         distance = math.sqrt((x - tank.x)**2 + (y - tank.y)**2)
         angle = math.atan2(y - tank.y, x - tank.x)
         if distance < FLAGRADIUS + FLAGSPREAD:
-            self.potential_fields[tank.index].append((alpha * (distance - FLAGRADIUS) * math.cos(angle), alpha * (distance - FLAGRADIUS) * math.sin(angle)))
+            return alpha * (distance - FLAGRADIUS) * math.cos(angle), alpha * (distance - FLAGRADIUS) * math.sin(angle)
         else:
-            self.potential_fields[tank.index].append((alpha * FLAGSPREAD * math.cos(angle), alpha * FLAGSPREAD * math.sin(angle)))
+            return alpha * FLAGSPREAD * math.cos(angle), alpha * FLAGSPREAD * math.sin(angle)
 
     def move_to_position(self, tank, target_x, target_y):
         """Set command to move to given coordinates."""
@@ -106,44 +136,19 @@ class Agent(object):
     def merge_potential_fields(self, fields, key):
         dx = 0
         dy = 0
-        print "Premerge"
-        print fields
         for field in fields:
             dx += field[0]
             dy += field[1]
         self.potential_fields[key] = (dx, dy)
-        print "Postmerger"
-        print self.potential_fields[key]
 
-    def calculate_attractive_fields(self, tank, flags):
-        alpha = 0.9
-
-        closest_flag = None
-        distance = float("inf")
-        # find closest flag
-        if tank.flag != '-':
-            self.return_to_base(tank)
+    def calculate_attractive_fields(self, tank):
+        dx = 0
+        dy = 0
+        if tank.flag == '-':
+            dx, dy = self.attractive_fields_func(tank.x, tank.y, 20)
         else:
-            for flag in flags:
-                if self.constants["team"] == flag.color:
-                    continue
-                distance_to_flag = math.sqrt((flag.x - tank.x)**2 + (flag.y - tank.y)**2)
-                if distance_to_flag < distance:
-                    distance = distance_to_flag
-                    closest_flag = flag
-
-            # get flag location
-            # calculate distance between flag and tank
-            distance = math.sqrt((closest_flag.x - tank.x)**2 + (closest_flag.y - tank.y)**2)
-            # calculate angle between closest_flag and tank
-            angle = math.atan2(closest_flag.y - tank.y, closest_flag.x - tank.x)
-            # calculate dx and dy based off of distance and angle
-            if distance < FLAGRADIUS:
-                self.potential_fields[tank.index].append((0, 0))
-            elif distance < FLAGRADIUS + FLAGSPREAD:
-                self.potential_fields[tank.index].append((alpha * (distance - FLAGRADIUS) * math.cos(angle), alpha * (distance - FLAGRADIUS) * math.sin(angle)))
-            else:
-                self.potential_fields[tank.index].append((alpha * FLAGSPREAD * math.cos(angle), alpha * FLAGSPREAD * math.sin(angle)))
+            dx, dy = self.return_to_base(tank)
+        return[(dx, dy)]
 
     def calculate_repulsive_fields(self, tank, obstacles, tanks):
         alpha = 0.9
