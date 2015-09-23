@@ -56,8 +56,6 @@ class Agent(object):
 
         self.commands = []
 
-        print self.constants
-
         for tank in mytanks:
             self.potential_fields[tank.index] = []
             self.calculate_attractive_fields(tank, flags)
@@ -69,14 +67,11 @@ class Agent(object):
             # move in direction based off of dx and dy
             self.merge_potential_fields(self.potential_fields[key], key)
 
-        print self.potential_fields
-
         for tank in mytanks:
-            if tank.flag:
+            if tank.flag != '-':
                 self.return_to_base(tank)
             else:
                 self.move_to_position(tank, tank.x + self.potential_fields[tank.index][0], tank.y + self.potential_fields[tank.index][1])
-
         results = self.bzrc.do_commands(self.commands)
 
     def return_to_base(self, tank):
@@ -112,7 +107,6 @@ class Agent(object):
 
     def calculate_attractive_fields(self, tank, flags):
         alpha = 0.9
-        print tank.flag
 
         closest_flag = None
         distance = float("inf")
@@ -137,7 +131,6 @@ class Agent(object):
             self.potential_fields[tank.index].append((alpha * (distance - FLAGRADIUS) * math.cos(angle), alpha * (distance - FLAGRADIUS) * math.sin(angle)))
         else:
             self.potential_fields[tank.index].append((alpha * FLAGSPREAD * math.cos(angle), alpha * FLAGSPREAD * math.sin(angle)))
-        print self.potential_fields[tank.index]
 
     def calculate_repulsive_fields(self):
         pass
