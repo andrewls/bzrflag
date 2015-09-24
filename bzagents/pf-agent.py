@@ -23,6 +23,7 @@
 import sys
 import math
 import time
+import pprint
 # from bzrflag.constants import FLAGRADIUS
 from bzrc import BZRC, Command
 
@@ -32,8 +33,7 @@ import show_field as graph
 FLAGRADIUS = 2.5
 FLAGSPREAD = 100
 
-OBSTACLERADIUS = 1
-OBSTACLESPREAD = 10
+OBSTACLESPREAD = 20
 
 class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
@@ -81,7 +81,55 @@ class Agent(object):
             else:
                 return alpha * FLAGSPREAD * math.cos(angle), alpha * FLAGSPREAD * math.sin(angle)
 
+        def repulsive_fields_func(x, y, res):
+            alpha = 2
+            INFINITY = 1000000
+
+            potential_fields = []
+            for obstacle in self.obstacles:
+                xavg = 0
+                yavg = 0
+                for corner in obstacle:
+                    xavg += corner[0]
+                    yavg += corner[1]
+                xavg = xavg / len(obstacle)
+                yavg = yavg / len(obstacle)
+                radius = math.sqrt((obstacle[0][0] - xavg)**2 + (obstacle[0][1] - yavg)**2)
+                distance = math.sqrt((xavg - x)**2 + (yavg - y)**2) #tank distance from center
+                angle = math.atan2(yavg - y, xavg - x)
+                if distance < radius + OBSTACLESPREAD:
+                    potential_fields.append((-alpha * (OBSTACLESPREAD + radius - distance) * math.cos(angle), -alpha * (OBSTACLESPREAD + radius - distance) * math.sin(angle)))
+            print potential_fields
+
+            # merge potential fields
+            return self.merge_potential_fields(potential_fields)
+
+        def tangential_fields_func(x, y, res):
+            alpha = 1
+
+            potential_fields = []
+
+            for obstacle in self.obstacles:
+                xavg = 0
+                yavg = 0
+                for corner in obstacle:
+                    xavg += corner[0]
+                    yavg += corner[1]
+                xavg = xavg / len(obstacle)
+                yavg = yavg / len(obstacle)
+                radius = math.sqrt((obstacle[0][0] - xavg)**2 + (obstacle[0][1] - yavg)**2)
+                distance = math.sqrt((xavg - x)**2 + (yavg - y)**2) #tank distance from center
+                angle = math.atan2(yavg - y, xavg - x) + math.pi/2
+                if distance < radius + OBSTACLESPREAD:
+                    potential_fields.append((-alpha * (OBSTACLESPREAD + radius - distance) * math.cos(angle), -alpha * (OBSTACLESPREAD + radius - distance) * math.sin(angle)))
+            print potential_fields
+            
+            return self.merge_potential_fields(potential_fields)
+
+
         self.attractive_fields_func = attractive_fields_func
+        self.repulsive_fields_func = repulsive_fields_func
+        self.tangential_fields_func = tangential_fields_func
 
         bases = self.bzrc.get_bases()
         for base in bases:
@@ -92,17 +140,21 @@ class Agent(object):
 
         for tank in mytanks:
             self.potential_fields[tank.index] = self.calculate_attractive_fields(tank)
-            # self.calculate_repulsive_fields(tank, self.obstacles, mytanks + othertanks)
+            self.potential_fields[tank.index] = self.potential_fields[tank.index] + self.calculate_repulsive_fields(tank, self.obstacles, mytanks + othertanks)
             self.calculate_tangential_fields()
 
         for key in self.potential_fields.keys():
             # reduce potential fields to one
             # move in direction based off of dx and dy
-            self.merge_potential_fields(self.potential_fields[key], key)
+            self.potential_fields[key] = self.merge_potential_fields(self.potential_fields[key])
 
         for tank in mytanks:
             self.move_to_position(tank, tank.x + self.potential_fields[tank.index][0], tank.y + self.potential_fields[tank.index][1])
         results = self.bzrc.do_commands(self.commands)
+
+        # graph.plot_single(self.attractive_fields_func, self.obstacles, "attractive.png")
+        # graph.plot_single(self.repulsive_fields_func, self.obstacles, "repulsive.png")
+        graph.plot_single(self.tangential_fields_func, self.obstacles, "tangential.png")
 
     def return_to_base(self, tank):
         # get the coordinates of the center of the base
@@ -133,13 +185,13 @@ class Agent(object):
             angle -= 2 * math.pi
         return angle
 
-    def merge_potential_fields(self, fields, key):
+    def merge_potential_fields(self, fields):
         dx = 0
         dy = 0
         for field in fields:
             dx += field[0]
             dy += field[1]
-        self.potential_fields[key] = (dx, dy)
+        return (dx, dy)
 
     def calculate_attractive_fields(self, tank):
         dx = 0
@@ -151,23 +203,12 @@ class Agent(object):
         return[(dx, dy)]
 
     def calculate_repulsive_fields(self, tank, obstacles, tanks):
-        alpha = 0.9
-        INFINITY = 1000000
-        for obstacle in obstacles:
-            for corner in obstacle:
-                distance = math.sqrt((corner[0] - tank.x)**2 + (corner[1] - tank.y)**2)
-                angle = math.atan2(corner[1] - tank.y, corner[0] - tank.x)
-                print "Tank %d is %f from obstacle" % (tank.index, distance)
+        dx, dy = self.repulsive_fields_func(tank.x, tank.y, 20)
+        return [(dx, dy)]
 
-                if distance < OBSTACLERADIUS:
-                    self.potential_fields[tank.index].append((- math.copysign(1, math.cos(angle)) * INFINITY, -math.copysign(1, math.sin(angle)) * INFINITY))
-                elif distance < OBSTACLERADIUS + OBSTACLESPREAD:
-                    self.potential_fields[tank.index].append((-alpha * (OBSTACLESPREAD + OBSTACLERADIUS - distance) * math.cos(angle), -alpha * (OBSTACLESPREAD + OBSTACLERADIUS - distance) * math.sin(angle)))
-                print "Potential field that was calculated:"
-
-        TANKRADIUS = 2
-        TANKSPREAD = 5
-        TANKALPHA = 0.1
+        # TANKRADIUS = 2
+        # TANKSPREAD = 5
+        # TANKALPHA = 0.1
         # for other_tank in tanks:
         #     distance = math.sqrt((other_tank.x - tank.x)**2 + (other_tank.y - tank.y)**2)
         #     angle = math.atan2(other_tank.y - tank.y, other_tank.x - tank.x)
@@ -176,7 +217,7 @@ class Agent(object):
         #         self.potential_fields[tank.index].append((- math.copysign(1, math.cos(angle)) * INFINITY, -math.copysign(1, math.sin(angle)) * INFINITY))
         #     elif distance < OBSTACLERADIUS + OBSTACLESPREAD:
         #         self.potential_fields[tank.index].append((-TANKALPHA * (OBSTACLESPREAD + OBSTACLERADIUS - distance) * math.cos(angle), -TANKALPHA * (OBSTACLESPREAD + OBSTACLERADIUS - distance) * math.sin(angle)))
-        print self.potential_fields[tank.index][-1]
+        # print self.potential_fields[tank.index][-1]
 
     def calculate_tangential_fields(self):
         pass
