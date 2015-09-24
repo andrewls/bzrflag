@@ -69,8 +69,6 @@ class Agent(object):
                 if distance_to_flag < distance:
                     distance = distance_to_flag
                     closest_flag = flag
-            # get flag location
-            print "Getting flag %s" % closest_flag.color
             # calculate angle between closest_flag and tank
             angle = math.atan2(closest_flag.y - y, closest_flag.x - x)
             # calculate dx and dy based off of distance and angle
@@ -99,7 +97,6 @@ class Agent(object):
                 angle = math.atan2(yavg - y, xavg - x)
                 if distance < radius + OBSTACLESPREAD:
                     potential_fields.append((-alpha * (OBSTACLESPREAD + radius - distance) * math.cos(angle), -alpha * (OBSTACLESPREAD + radius - distance) * math.sin(angle)))
-            print potential_fields
 
             # merge potential fields
             return self.merge_potential_fields(potential_fields)
@@ -122,14 +119,20 @@ class Agent(object):
                 angle = math.atan2(yavg - y, xavg - x) + math.pi/2
                 if distance < radius + OBSTACLESPREAD:
                     potential_fields.append((-alpha * (OBSTACLESPREAD + radius - distance) * math.cos(angle), -alpha * (OBSTACLESPREAD + radius - distance) * math.sin(angle)))
-            print potential_fields
-            
+
             return self.merge_potential_fields(potential_fields)
 
+        def super_tab(x, y, res):
+            potential_fields = [attractive_fields_func(x, y, res)]
+            potential_fields = potential_fields + [repulsive_fields_func(x, y, res)]
+            potential_fields = potential_fields + [tangential_fields_func(x, y, res)]
+            merged = self.merge_potential_fields(potential_fields)
+            return merged[0], merged[1]
 
         self.attractive_fields_func = attractive_fields_func
         self.repulsive_fields_func = repulsive_fields_func
         self.tangential_fields_func = tangential_fields_func
+        self.super_tab = super_tab
 
         bases = self.bzrc.get_bases()
         for base in bases:
@@ -141,7 +144,7 @@ class Agent(object):
         for tank in mytanks:
             self.potential_fields[tank.index] = self.calculate_attractive_fields(tank)
             self.potential_fields[tank.index] = self.potential_fields[tank.index] + self.calculate_repulsive_fields(tank, self.obstacles, mytanks + othertanks)
-            self.calculate_tangential_fields()
+            self.potential_fields[tank.index] = self.potential_fields[tank.index] + self.calculate_tangential_fields(tank)
 
         for key in self.potential_fields.keys():
             # reduce potential fields to one
@@ -152,9 +155,10 @@ class Agent(object):
             self.move_to_position(tank, tank.x + self.potential_fields[tank.index][0], tank.y + self.potential_fields[tank.index][1])
         results = self.bzrc.do_commands(self.commands)
 
-        # graph.plot_single(self.attractive_fields_func, self.obstacles, "attractive.png")
-        # graph.plot_single(self.repulsive_fields_func, self.obstacles, "repulsive.png")
-        graph.plot_single(self.tangential_fields_func, self.obstacles, "tangential.png")
+        # graph.plot_single(self.attractive_fields_func, self.obstacles, "attractive-four-ls.png")
+        # graph.plot_single(self.repulsive_fields_func, self.obstacles, "repulsive-four-ls.png")
+        # graph.plot_single(self.tangential_fields_func, self.obstacles, "tangential-four-ls.png")
+        # graph.plot_single(self.super_tab, self.obstacles, "all-rotated_box.png")
 
     def return_to_base(self, tank):
         # get the coordinates of the center of the base
@@ -186,6 +190,7 @@ class Agent(object):
         return angle
 
     def merge_potential_fields(self, fields):
+        print fields
         dx = 0
         dy = 0
         for field in fields:
@@ -219,8 +224,10 @@ class Agent(object):
         #         self.potential_fields[tank.index].append((-TANKALPHA * (OBSTACLESPREAD + OBSTACLERADIUS - distance) * math.cos(angle), -TANKALPHA * (OBSTACLESPREAD + OBSTACLERADIUS - distance) * math.sin(angle)))
         # print self.potential_fields[tank.index][-1]
 
-    def calculate_tangential_fields(self):
-        pass
+    def calculate_tangential_fields(self, tank):
+        dx, dy = self.tangential_fields_func(tank.x, tank.y, 20)
+        return [(dx, dy)]
+
 
 def main():
     # Process CLI arguments.
