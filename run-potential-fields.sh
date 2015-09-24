@@ -4,6 +4,6 @@
 
 sleep 2
 python bzagents/pf-agent.py localhost 50100 &
-python bzagents/really-dumb-agent.py localhost 50101 &
-python bzagents/really-dumb-agent.py localhost 50102 &
+python bzagents/reall-dumb-agent.py localhost 50101 &
+python bzagents/agentsmart.pyc localhost 50102 &
 python bzagents/really-dumb-agent.py localhost 50103 &
