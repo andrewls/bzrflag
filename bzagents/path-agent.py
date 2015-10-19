@@ -121,7 +121,7 @@ class Node:
                     # and finally, we can do the comparison to the original lines
                     if intersect(self.point, endpoint, other_start_point, other_end_point):
                         if debug:
-                            print "An intersecting line segment was found and removed from %r to %r" % (self.point, endpoint)
+                            print "An intersecting line segment was found and removed from %r to %r" % (self.point, endpoint)89
                         # remove the offending endpoint from the set of neighbors
                         if endpoint in self.neighbors:
                             self.neighbors.remove(endpoint)
