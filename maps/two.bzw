@@ -1,0 +1,44 @@
+base
+position 0 370 0
+rotation 0
+size 30 30 0
+color 3
+end
+
+base
+position 0 -370 0
+rotation 0
+size 30 30 0
+color 1
+end
+
+box
+position 0 0 0
+rotation 0
+size 260 20 0
+end
+
+box
+position 250 -250 0
+rotation 0
+size 20 100 20
+end
+
+box
+position 100 -100 0
+rotation 0
+size 100 20 20
+end
+
+box
+position -250 250 0
+rotation 0
+size 20 100 20
+end
+
+box
+position -100 100 0
+rotation 0
+size 100 20 20
+end
+
