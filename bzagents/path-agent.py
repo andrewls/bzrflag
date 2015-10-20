@@ -18,7 +18,7 @@
 # Often this translates to something like the following (with the
 # port name being printed out by the bzrflag server):
 # python agent0.py localhost 49857
-#################################################################
+################################################################
 
 import sys
 import math
@@ -29,6 +29,7 @@ import uuid
 
 from collections import defaultdict
 from bzrc import BZRC, Command
+
 
 current_id = 0
 
@@ -82,49 +83,57 @@ class Node:
                 obstacle_points[-1].append(points[-1])
 
         #construct edges to use to check for intersections - make sure to only include edges within obstacles, through
-        edges = defaultdict(list)
+        edges = set()
+
         for obstacle in obstacle_points:
             for start_point in obstacle:
                 for end_point in obstacle:
                     if start_point != end_point:
-                        edges[start_point].append(end_point)
-        print obstacles
+                        edges.add(Edge(start_point, end_point))
+
         print edges
+        print self.neighbors
 
-        # for start_point in points:
-        #     for end_point in points:
-        #         if start_point != end_point:
-        #             edges[start_point].append(end_point)
+        nodes_to_remove = set()
+        for end_point in self.neighbors:
+            for edge in edges:
+                print "Checking point %r and %r against %r" % (self.point, end_point.point, edge)
+                # if line_intersection(self.point, end_point.point, edge.point_a, edge.point_b):
+                # print "\tX: %f, Y: %f" % intersection(line(self.point, end_point.point), line(edge.point_a, edge.point_b))
+                # print "\tX: %f, Y: %f" % line_intersection(self.point, end_point.point, edge.point_a, edge.point_b)
+                # if intersection(line(self.point, end_point.point), line(edge.point_a, edge.point_b)):
+                if closed_segment_intersect((self.point.x, self.point.y), (end_point.point.x, end_point.point.y), (edge.point_a.x, edge.point_a.y), (edge.point_b.x, edge.point_b.y)):
+                    print "Removing end point %r" % end_point
+                    nodes_to_remove.add(end_point)
+                    break
 
+        for node in nodes_to_remove:
+            self.neighbors.remove(node)
 
-        #debug
-        goal_point = Point(0,370)
-        #/debug
-
-        for endpoint in points:
-            # the edge is self.point to endpoint
-            # get the other edges to check it against
-            if end_point == goal_point:
-                debug = True
-            else:
-                debug = False
-            for other_start_point in edges.keys():
-                if other_start_point == endpoint:
-                    if debug:
-                        print "Skipping line from %r to %r" % (other_start_point, endpoint)
-                    continue
-                for other_end_point in edges[other_start_point]:
-                    if other_end_point == endpoint:
-                        if debug:
-                            print "Skipping line from %r to %r" % (other_end_point, endpoint)
-                        continue
-                    # and finally, we can do the comparison to the original lines
-                    if intersect(self.point, endpoint, other_start_point, other_end_point):
-                        if debug:
-                            print "An intersecting line segment was found and removed from %r to %r" % (self.point, endpoint)89
-                        # remove the offending endpoint from the set of neighbors
-                        if endpoint in self.neighbors:
-                            self.neighbors.remove(endpoint)
+        print "Final neighbors:"
+        print self.neighbors
+        # # for start_point in points:
+        # #     for end_point in points:
+        # #         if start_point != end_point:
+        # #             edges[start_point].append(end_point)
+        #
+        # for endpoint in points:
+        #     # the edge is self.point to endpoint
+        #     # get the other edges to check it against
+        #     for other_start_point in edges.keys():
+        #         if other_start_point == endpoint:
+        #             # print "Skipping line from %r to %r" % (other_start_point, endpoint)
+        #             continue
+        #         for other_end_point in edges[other_start_point]:
+        #             if other_end_point == endpoint:
+        #                 # print "Skipping line from %r to %r" % (other_end_point, endpoint)
+        #                 continue
+        #             # and finally, we can do the comparison to the original lines
+        #             if intersect(self.point, endpoint, other_start_point, other_end_point):
+        #                 # print "An intersecting line segment was found and removed from %r to %r" % (self.point, endpoint)
+        #                 # remove the offending endpoint from the set of neighbors
+        #                 if endpoint in self.neighbors:
+        #                     self.neighbors.remove(endpoint)
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -144,13 +153,105 @@ class Node:
     def __str__(self):
         return self.__repr__()
 
+class Edge:
+    def __init__(self, point_a, point_b):
+        self.point_a = point_a
+        self.point_b = point_b
 
-def ccw(A,B,C):
-    return (C.y-A.y) * (B.x-A.x) > (B.y-A.y) * (C.x-A.x)
+    def __hash__(self):
+        return Point(self.point_a.x + self.point_b.x, self.point_a.y + self.point_b.y).__hash__()
 
-# Return true if line segments AB and CD intersect
-def intersect(A,B,C,D):
-    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return (self.point_a == other.point_a and self.point_b == other.point_b) or (self.point_a == other.point_b and self.point_b == other.point_a)
+        else:
+            return False
+
+    def __ne__(self, other):
+        return not self.__eq(other)
+
+    def __repr__(self):
+        return "<Edge point_a: %r, point_b: %r>" % (self.point_a, self.point_b)
+
+    def __str__(self):
+        return self.__repr__()
+
+def side(a,b,c):
+    """ Returns a position of the point c relative to the line going through a and b
+        Points a, b are expected to be different
+    """
+    d = (c[1]-a[1])*(b[0]-a[0]) - (b[1]-a[1])*(c[0]-a[0])
+    return 1 if d > 0 else (-1 if d < 0 else 0)
+
+def is_point_in_closed_segment(a, b, c):
+    """ Returns True if c is inside closed segment, False otherwise.
+        a, b, c are expected to be collinear
+    """
+    if a[0] < b[0]:
+        return a[0] < c[0] and c[0] < b[0]
+    if b[0] < a[0]:
+        return b[0] < c[0] and c[0] < a[0]
+
+    if a[1] < b[1]:
+        return a[1] < c[1] and c[1] < b[1]
+    if b[1] < a[1]:
+        return b[1] < c[1] and c[1] < a[1]
+
+    return a[0] == c[0] and a[1] == c[1]
+
+#
+def closed_segment_intersect(a,b,c,d):
+    """ Verifies if closed segments a, b, c, d do intersect."""
+    # print a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]
+    if (b[0] == 2 or b[0] == 6) and b[1] == 5 and c[0] == 2 and c[1] == 5:
+        debug = True
+    else:
+        debug = False
+    print debug
+
+    if a == b:
+        if debug:
+            print "DEBUG A == B"
+        return False
+    if c == d:
+        if debug:
+            print "DEBUG C == D"
+        return False
+
+    s1 = side(a,b,c)
+    s2 = side(a,b,d)
+
+    # All points are collinear
+    if s1 == 0 and s2 == 0:
+        if debug:
+            print "DEBUG s1 == 0 and s2 == 0"
+        return \
+            is_point_in_closed_segment(a, b, c) or is_point_in_closed_segment(a, b, d) or \
+            is_point_in_closed_segment(c, d, a) or is_point_in_closed_segment(c, d, b)
+
+    if s1 == 0 or s2 == 0:
+        if debug:
+            print "DEBUG s1 == 0 or s2 == 0"
+        return not ((a[0] == c[0] and a[1] == c[1]) or (a[0] == d[0] and a[1] == d[1]) or (b[0] == c[0] and b[1] == c[1]) or (b[0] == d[0] and b[1] == d[1]))
+
+    # No touching and on the same side
+    if s1 and s1 == s2:
+        if debug:
+            print "DEBUG s1 and s1 == s2"
+        return False
+
+    s1 = side(c,d,a)
+    s2 = side(c,d,b)
+
+    # No touching and on the same side
+    if s1 and s1 == s2:
+        if debug:
+            print "DEBUG second s1 and s1 == s2"
+        return False
+
+    if debug:
+        print "DEBUG default"
+    return True
 
 def crappity_graphity(start, end, obstacles, algorithm="a*"):
     points = [start]
@@ -392,6 +493,24 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    start = Node(Point(4, 0))
+    a = Node(Point( 2, 5))
+    b = Node(Point(6, 5))
+    c = Node(Point(6, 7))
+    d = Node(Point(2, 7))
+    end = Node(Point(4,10))
+
+    start.addNeighbor(a)
+    start.addNeighbor(b)
+    start.addNeighbor(c)
+    start.addNeighbor(d)
+    start.addNeighbor(end)
+
+    obstacles = [[(2,5), (6,5), (6,7), (2,7)]]
+
+    start.removeIntersectingEdges(obstacles)
+
+    # main()
+
 
 # vim: et sw=4 sts=4
