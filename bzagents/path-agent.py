@@ -292,9 +292,10 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
     if algorithm == "a*":
         points_to_visit = aStarSearch(nodes[start], nodes[end])
     elif algorithm == "dfs":
-        points_to_visit = depth_first_search(nodes[start], nodes[end])
+        points_to_visit, cost = depth_first_search(nodes[start], nodes[end])
+        print "DFS Path: %r" % (points_to_visit)
     else:
-        points_to_visit = breadth_first_search(nodes[start], nodes[end])
+        points_to_visit, cost = breadth_first_search(nodes[start], nodes[end])
     print "Returning from crappity_graphity:"
     print points_to_visit
     return points_to_visit
@@ -436,7 +437,6 @@ class Agent(object):
 
         self.commands = []
 
-        print "Ticking"
         for tank in self.mytanks:
             if (not tank.index in self.paths) or (not self.paths[tank.index]):
                 starting_point = Point(tank.x, tank.y)
@@ -451,10 +451,10 @@ class Agent(object):
                         min_distance = math.sqrt((tank.x - flag.x)**2 + (tank.y - flag.y)**2)
                         closest_flag = flag
                 goal_point = Point(closest_flag.x, closest_flag.y)
-                self.paths[tank.index] = crappity_graphity(starting_point, goal_point, self.obstacles, "a*")
+                self.paths[tank.index] = crappity_graphity(starting_point, goal_point, self.obstacles, "dfs")
 
             # check to see if we're within a threshold distance of the next point
-            if math.sqrt((tank.x - self.paths[tank.index][0].point.x)**2 + (tank.y - self.paths[tank.index][0].point.y)**2) < 10:
+            if math.sqrt((tank.x - self.paths[tank.index][0].point.x)**2 + (tank.y - self.paths[tank.index][0].point.y)**2) < 25:
                 # print "Tank %d has arrived at one point and is moving on to the next point in its path." % tank.index
                 self.paths[tank.index].pop(0)
 
