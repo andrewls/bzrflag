@@ -74,6 +74,7 @@ class Node:
 
     def removeIntersectingEdges(self, obstacles):
         # given four vertices, an edge intersects with an obstacle if the edge intersects with any edge that doesn't include the endpoint
+        # print "Obstacles: %r"
         points = []
         obstacle_points = []
         for obstacle in obstacles:
@@ -91,27 +92,25 @@ class Node:
                     if start_point != end_point:
                         edges.add(Edge(start_point, end_point))
 
-        print edges
-        print self.neighbors
+        # print edges
+        # print self.neighbors
 
         nodes_to_remove = set()
         for end_point in self.neighbors:
             for edge in edges:
-                print "Checking point %r and %r against %r" % (self.point, end_point.point, edge)
-                # if line_intersection(self.point, end_point.point, edge.point_a, edge.point_b):
-                # print "\tX: %f, Y: %f" % intersection(line(self.point, end_point.point), line(edge.point_a, edge.point_b))
-                # print "\tX: %f, Y: %f" % line_intersection(self.point, end_point.point, edge.point_a, edge.point_b)
-                # if intersection(line(self.point, end_point.point), line(edge.point_a, edge.point_b)):
                 if closed_segment_intersect((self.point.x, self.point.y), (end_point.point.x, end_point.point.y), (edge.point_a.x, edge.point_a.y), (edge.point_b.x, edge.point_b.y)):
-                    print "Removing end point %r" % end_point
                     nodes_to_remove.add(end_point)
                     break
 
         for node in nodes_to_remove:
             self.neighbors.remove(node)
 
-        print "Final neighbors:"
-        print self.neighbors
+        # print "Final neighbors:"
+        # print self.neighbors
+
+
+        # WORKING CODE ENDS HERE
+
         # # for start_point in points:
         # #     for end_point in points:
         # #         if start_point != end_point:
@@ -203,11 +202,12 @@ def is_point_in_closed_segment(a, b, c):
 def closed_segment_intersect(a,b,c,d):
     """ Verifies if closed segments a, b, c, d do intersect."""
     # print a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]
-    if (b[0] == 2 or b[0] == 6) and b[1] == 5 and c[0] == 2 and c[1] == 5:
+    debug = False
+    if b[0] == 15 and b[1] == 9 and c[0] == 15 and c[1] == 8:
         debug = True
     else:
         debug = False
-    print debug
+    # print debug
 
     if a == b:
         if debug:
@@ -262,25 +262,39 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
 
     points.append(end)
 
-    nodes = []
+    nodes = {}
+
     for point in points:
         node = Node(point)
-        nodes.append(node)
+        nodes[point] = node
+
+    for point in points:
         for point2 in points:
             if point == point2:
                 continue
             else:
-                node.addNeighbor(Node(point2))
+                nodes[point].addNeighbor(nodes[point2])
 
-    for node in nodes:
-        node.removeIntersectingEdges(obstacles)
-    print "After removing intersecting edges, start node has neighbors %r" % nodes[0].neighbors
+    # nodes = []
+    # for point1 in points:
+    #     node = Node(point)
+    #     nodes.append(node)
+    #     for point2 in points:
+    #         if point1 == point2:
+    #             continue
+    #         else:
+    #             node.addNeighbor(Node(point2))
+
+    for point in nodes.keys():
+        nodes[point].removeIntersectingEdges(obstacles)
+        print "\tNode %r has neighbors %r" % (nodes[point], nodes[point].neighbors)
+
     if algorithm == "a*":
-        points_to_visit = aStarSearch(nodes[0], nodes[-1])
+        points_to_visit = aStarSearch(nodes[start], nodes[end])
     elif algorithm == "dfs":
-        points_to_visit = depth_first_search(nodes[0], nodes[-1])
+        points_to_visit = depth_first_search(nodes[start], nodes[end])
     else:
-        points_to_visit = breadth_first_search(nodes[0], nodes[-1])
+        points_to_visit = breadth_first_search(nodes[start], nodes[end])
     print "Returning from crappity_graphity:"
     print points_to_visit
     return points_to_visit
@@ -364,6 +378,7 @@ def aStarSearch (start,goal):
         print "A* Visiting Node: %r" % current
         if current == goal:
             print "A* goal state reached"
+            print "\tCame from: %r" % came_from
             return reconstruct_path(came_from, goal)
 
         #remove current from openset
@@ -371,13 +386,14 @@ def aStarSearch (start,goal):
         #add current to closedset
         closedset.add(current)
         #expanding the horizon here
+        print "Neighbors: %r" % current.neighbors
         for neighbor in current.neighbors:
             print "Considering %r" % neighbor
             if neighbor in closedset:
                 continue
 
             tentative_g_score = g_score[current.id] + dist_between(current,neighbor)
-            print "\tTentative g score is %f" % tentative_g_score
+            # print "\tTentative g score is %f" % tentative_g_score
 
             if tentative_g_score < g_score[neighbor.id]:
                 came_from[neighbor.id] = current
@@ -391,10 +407,12 @@ def aStarSearch (start,goal):
 #TODO does this work out of the box? It just might...
 def reconstruct_path(came_from,current):
     total_path = [current]
-    while current in came_from:
+    while current.id in came_from:
+        print "\tRetracing: %r" % total_path
         current = came_from[current.id]
         total_path.append(current)
-    return total_path
+    print "Retraced: %r" % total_path
+    return total_path[::-1]
 
 class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
@@ -437,13 +455,14 @@ class Agent(object):
 
             # check to see if we're within a threshold distance of the next point
             if math.sqrt((tank.x - self.paths[tank.index][0].point.x)**2 + (tank.y - self.paths[tank.index][0].point.y)**2) < 10:
-                print "Tank %d has arrived at one point and is moving on to the next point in its path." % tank.index
+                # print "Tank %d has arrived at one point and is moving on to the next point in its path." % tank.index
                 self.paths[tank.index].pop(0)
 
             # go to the next point on the path
             if self.paths[tank.index]:
-                print "Tank %d moving to position %r from (%d, %d)" % (tank.index, self.paths[tank.index][0].point, tank.x, tank.y)
+                # print "Tank %d moving to position %r from (%d, %d)" % (tank.index, self.paths[tank.index][0].point, tank.x, tank.y)
                 self.move_to_position(tank, self.paths[tank.index][0].point.x, self.paths[tank.index][0].point.y)
+            break
         results = self.bzrc.do_commands(self.commands)
 
     def move_to_position(self, tank, target_x, target_y):
@@ -493,24 +512,33 @@ def main():
 
 
 if __name__ == '__main__':
-    start = Node(Point(4, 0))
-    a = Node(Point( 2, 5))
-    b = Node(Point(6, 5))
-    c = Node(Point(6, 7))
-    d = Node(Point(2, 7))
-    end = Node(Point(4,10))
+    # start = Node(Point(4, 0))
+    # a = Node(Point(2, 5))
+    # b = Node(Point(6, 5))
+    # c = Node(Point(6, 7))
+    # d = Node(Point(2, 7))
+    #
+    # e = Node(Point(3, 8))
+    # f = Node(Point(15, 8))
+    # g = Node(Point(15, 9))
+    # h = Node(Point(3, 9))
+    # end = Node(Point(4,10))
+    #
+    # start.addNeighbor(a)
+    # start.addNeighbor(b)
+    # start.addNeighbor(c)
+    # start.addNeighbor(d)
+    # start.addNeighbor(e)
+    # start.addNeighbor(f)
+    # start.addNeighbor(g)
+    # start.addNeighbor(h)
+    # start.addNeighbor(end)
+    #
+    # obstacles = [[(2,5), (6,5), (6,7), (2,7)], [(3,8), (15,8), (15,9), (3,9)]]
+    #
+    # start.removeIntersectingEdges(obstacles)
 
-    start.addNeighbor(a)
-    start.addNeighbor(b)
-    start.addNeighbor(c)
-    start.addNeighbor(d)
-    start.addNeighbor(end)
-
-    obstacles = [[(2,5), (6,5), (6,7), (2,7)]]
-
-    start.removeIntersectingEdges(obstacles)
-
-    # main()
+    main()
 
 
 # vim: et sw=4 sts=4
