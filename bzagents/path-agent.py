@@ -29,6 +29,7 @@ import uuid
 
 from collections import defaultdict
 from bzrc import BZRC, Command
+from Queue import PriorityQueue
 
 
 current_id = 0
@@ -78,8 +79,6 @@ class Node:
     def removeIntersectingEdges(self, obstacles):
         # given four vertices, an edge intersects with an obstacle if the edge intersects with any edge that doesn't include the endpoint
         # print "Obstacles: %r"
-        print self
-        print "\n\nNeighbors length before removing edges: %r" % len(self.neighbors)
         points = []
         obstacle_points = []
         for obstacle in obstacles:
@@ -104,9 +103,6 @@ class Node:
             for edge in edges:
                 if closed_segment_intersect((self.point.x, self.point.y), (end_point.point.x, end_point.point.y), (edge.point_a.x, edge.point_a.y), (edge.point_b.x, edge.point_b.y)):
                     nodes_to_remove.add(end_point)
-                    if end_point.point.x == 80 and end_point.point.y == -100 and self.point.x == 80 and self.point.y == -140:
-                        print "Hakuna 21"
-                        print edge
                     break
                 elif (abs(self.point.x) == 400 and end_point.point.x == self.point.x) or (abs(self.point.y) == 400 and end_point.point.y == self.point.y):
                     nodes_to_remove.add(end_point)
@@ -114,36 +110,6 @@ class Node:
 
         for node in nodes_to_remove:
             self.neighbors.remove(node)
-
-        print "\n\nNeighbors after removing edges: %r\n\n\n\n\n\n" % self.neighbors
-        # print "Final neighbors:"
-        # print self.neighbors
-
-
-        # WORKING CODE ENDS HERE
-
-        # # for start_point in points:
-        # #     for end_point in points:
-        # #         if start_point != end_point:
-        # #             edges[start_point].append(end_point)
-        #
-        # for endpoint in points:
-        #     # the edge is self.point to endpoint
-        #     # get the other edges to check it against
-        #     for other_start_point in edges.keys():
-        #         if other_start_point == endpoint:
-        #             # print "Skipping line from %r to %r" % (other_start_point, endpoint)
-        #             continue
-        #         for other_end_point in edges[other_start_point]:
-        #             if other_end_point == endpoint:
-        #                 # print "Skipping line from %r to %r" % (other_end_point, endpoint)
-        #                 continue
-        #             # and finally, we can do the comparison to the original lines
-        #             if intersect(self.point, endpoint, other_start_point, other_end_point):
-        #                 # print "An intersecting line segment was found and removed from %r to %r" % (self.point, endpoint)
-        #                 # remove the offending endpoint from the set of neighbors
-        #                 if endpoint in self.neighbors:
-        #                     self.neighbors.remove(endpoint)
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -281,8 +247,28 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
     points = [start]
 
     for obstacle in obstacles:
+        obstacles_x = 0
+        obstacles_y = 0
         for corner in obstacle:
-            points.append(Point(corner[0], corner[1]))
+            obstacles_x += corner[0]
+            obstacles_y += corner[1]
+        obstacle_center = (float(obstacles_x) / len(obstacle), float(obstacles_y) / len(obstacle))
+
+        for corner in obstacle:
+            x_coordinate, y_coordinate = corner
+            # if abs(corner[0]) != 400:
+            #     position = side(obstacle_center, (obstacle_center[0], obstacle_center[1] + 1), corner)
+            #     if position < 0:
+            #         x_coordinate -= 5
+            #     elif position > 0:
+            #         x_coordinate += 5
+            # if abs(corner[1]) != 400:
+            #     position = side(obstacle_center, (obstacle_center[0] + 1, obstacle_center[1]), corner)
+            #     if position < 0:
+            #         y_coordinate -= 5
+            #     elif position > 0:
+            #         y_coordinate += 5
+            points.append(Point(x_coordinate, y_coordinate))
 
     points.append(end)
 
@@ -299,23 +285,8 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
             else:
                 nodes[point].addNeighbor(nodes[point2])
 
-    # nodes = []
-    # for point1 in points:
-    #     node = Node(point)
-    #     nodes.append(node)
-    #     for point2 in points:
-    #         if point1 == point2:
-    #             continue
-    #         else:
-    #             node.addNeighbor(Node(point2))
-
     for point in nodes.keys():
-        # if point.x != 80 or point.y != -140:
-            # continue
-        print "\n\n\n\n\n\n\n"
         nodes[point].removeIntersectingEdges(obstacles)
-        print "\tNode %r has neighbors %r" % (nodes[point], nodes[point].neighbors)
-        print "\n\n\n\n\n\n\n"
 
 
     if algorithm == "a*":
@@ -326,24 +297,12 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
         # points_to_visit = bssf_path
         print "DFS Path: %r" % (points_to_visit)
     else:
-        points_to_visit, cost = breadth_first_search(nodes[start], nodes[end])
+        print "Running breadth first search"
+        points_to_visit = breadth_first_search(nodes[start], nodes[end])
     print "Returning from crappity_graphity:"
-
-    print "\n\n\n\n\n\n\n"
     print points_to_visit
-    print "\n\n\n\n\n\n\n"
-
     return points_to_visit
 
-# def depth_first_search(graph, start, goal):
-#     stack = [(start, [start])]
-#     while stack:
-#         (vertex, path) = stack.pop()
-#         for next in graph[vertex] - set(path):
-#             if next == goal:
-#                 yield path + [next]
-#             else:
-#                 stack.append((next, path + [next]))
 
 class BSSF:
     def __init__(self):
@@ -391,40 +350,22 @@ def breadth_first_search(start, goal):
     global bssf_path
 
     visited = set()
-    queue = [(start, 0, [start])]
+    queue = PriorityQueue()
+    queue.put((0, start, [start]))
 
-    while queue:
-        current = queue.pop(0)
-        current_node, cost = current[0], current[1]
+    while not queue.empty():
+        current = queue.get()
+        current_node, cost, current_path = current[1], current[0], current[2]
+        if current_node in visited:
+            continue
         visited.add(current_node)
         if current_node == goal:
             if cost < bssf_cost:
-                bssf_path = current[2][:]
+                bssf_path = current_path[:]
         for neighbor in current_node.neighbors:
             if neighbor not in visited:
-                queue.append((neighbor, cost + dist_between(current, neighbor), current[2][:] + [neighbor]))
+                queue.put((cost + dist_between(current_node, neighbor), neighbor, current_path[:] + [neighbor]))
     return bssf_path
-
-# def breadth_first_search(start, goal):
-#     visited = set()
-#     queue = [start]
-#     solutions = []
-#
-#     if not start.neighbors and start != goal:
-#         return [], float("inf") #error
-#
-#     while queue:
-#         current = queue.pop(0)
-#         visited.add(current)
-#         if current == goal:
-#             # do something, we're done searching but we need to see if there's a better solution
-#             pass
-#         else:
-#             for neighbor in current.neighbors:
-#                 if neighbor not in visited:
-#                     neighbor.cost = current.cost + dist_between(current, neighbor)
-#                     queue.append(neighbor)
-#     return [], float("inf")
 
 def dist_between(node1, node2):
     return math.sqrt((node1.point.x - node2.point.x)**2 + (node1.point.y - node2.point.y)**2)
@@ -521,7 +462,7 @@ class Agent(object):
                         min_distance = math.sqrt((tank.x - flag.x)**2 + (tank.y - flag.y)**2)
                         closest_flag = flag
                 goal_point = Point(closest_flag.x, closest_flag.y)
-                self.paths[tank.index] = crappity_graphity(starting_point, goal_point, self.obstacles, "dfs")
+                self.paths[tank.index] = crappity_graphity(starting_point, goal_point, self.obstacles, "a*")
 
             # check to see if we're within a threshold distance of the next point
             if math.sqrt((tank.x - self.paths[tank.index][0].point.x)**2 + (tank.y - self.paths[tank.index][0].point.y)**2) < 25:
