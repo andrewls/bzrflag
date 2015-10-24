@@ -1,0 +1,5 @@
+Select Pivot Value for each node (for purpose of example, use 50)
+Send everything over 50 to one half of the hypercube, and everything under 50 to other half
+Each half of the hypercube is now a hypercube of one dimension less. So we can now choose a second pivot (25 and 75) and repeat this
+Send everything under 25 to one half of the hypercube, and everything over 25 to the other half
+When we get to a single dimension, each node sorts whatever it has left. By then, we know the exact order of each of the nodes, so we can just remember which processor has which chunk, essentially.

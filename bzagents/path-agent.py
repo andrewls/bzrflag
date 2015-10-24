@@ -32,6 +32,9 @@ from bzrc import BZRC, Command
 
 
 current_id = 0
+bssf_cost = float("inf")
+bssf_path = []
+current_path = []
 
 def generate_id():
     return uuid.uuid4()
@@ -75,6 +78,8 @@ class Node:
     def removeIntersectingEdges(self, obstacles):
         # given four vertices, an edge intersects with an obstacle if the edge intersects with any edge that doesn't include the endpoint
         # print "Obstacles: %r"
+        print self
+        print "\n\nNeighbors length before removing edges: %r" % len(self.neighbors)
         points = []
         obstacle_points = []
         for obstacle in obstacles:
@@ -93,18 +98,24 @@ class Node:
                         edges.add(Edge(start_point, end_point))
 
         # print edges
-        # print self.neighbors
 
         nodes_to_remove = set()
         for end_point in self.neighbors:
             for edge in edges:
                 if closed_segment_intersect((self.point.x, self.point.y), (end_point.point.x, end_point.point.y), (edge.point_a.x, edge.point_a.y), (edge.point_b.x, edge.point_b.y)):
                     nodes_to_remove.add(end_point)
+                    if end_point.point.x == 80 and end_point.point.y == -100 and self.point.x == 80 and self.point.y == -140:
+                        print "Hakuna 21"
+                        print edge
+                    break
+                elif (abs(self.point.x) == 400 and end_point.point.x == self.point.x) or (abs(self.point.y) == 400 and end_point.point.y == self.point.y):
+                    nodes_to_remove.add(end_point)
                     break
 
         for node in nodes_to_remove:
             self.neighbors.remove(node)
 
+        print "\n\nNeighbors after removing edges: %r\n\n\n\n\n\n" % self.neighbors
         # print "Final neighbors:"
         # print self.neighbors
 
@@ -203,8 +214,10 @@ def closed_segment_intersect(a,b,c,d):
     """ Verifies if closed segments a, b, c, d do intersect."""
     # print a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]
     debug = False
-    if b[0] == 15 and b[1] == 9 and c[0] == 15 and c[1] == 8:
+    # if a[0] == 0 and a[1] == -140 and b[0] == 80 and b[1] == -100:
+    if False:
         debug = True
+        print "A: %r, B: %r, C: %r, D: %r" % (a, b, c, d)
     else:
         debug = False
     # print debug
@@ -225,6 +238,8 @@ def closed_segment_intersect(a,b,c,d):
     if s1 == 0 and s2 == 0:
         if debug:
             print "DEBUG s1 == 0 and s2 == 0"
+        if ((a[0] == c[0] and a[1] == c[1] and b[0] == d[0] and b[1] == d[1]) or (a[0] == d[0] and a[1] == d[1] and b[0] == c[0] and b[1] == c[1])):
+            return False
         return \
             is_point_in_closed_segment(a, b, c) or is_point_in_closed_segment(a, b, d) or \
             is_point_in_closed_segment(c, d, a) or is_point_in_closed_segment(c, d, b)
@@ -232,7 +247,15 @@ def closed_segment_intersect(a,b,c,d):
     if s1 == 0 or s2 == 0:
         if debug:
             print "DEBUG s1 == 0 or s2 == 0"
-        return not ((a[0] == c[0] and a[1] == c[1]) or (a[0] == d[0] and a[1] == d[1]) or (b[0] == c[0] and b[1] == c[1]) or (b[0] == d[0] and b[1] == d[1]))
+            print "s1 = %d, s2 = %d" % (s1, s2)
+        if s1 == 0:
+            return is_point_in_closed_segment(a, b, c)
+            # print not ((a[0] == c[0] and a[1] == c[1]) or (b[0] == c[0] and b[1] == c[1]))
+            # return not ((a[0] == c[0] and a[1] == c[1]) or (b[0] == c[0] and b[1] == c[1]))
+        else:
+            return is_point_in_closed_segment(a, b, d)
+            # return not ((a[0] == d[0] and a[1] == d[1]) or (b[0] == d[0] and b[1] == d[1]))
+        # return not ((a[0] == c[0] and a[1] == c[1]) or (a[0] == d[0] and a[1] == d[1]) or (b[0] == c[0] and b[1] == c[1]) or (b[0] == d[0] and b[1] == d[1]))
 
     # No touching and on the same side
     if s1 and s1 == s2:
@@ -254,6 +277,7 @@ def closed_segment_intersect(a,b,c,d):
     return True
 
 def crappity_graphity(start, end, obstacles, algorithm="a*"):
+    global bssf_path
     points = [start]
 
     for obstacle in obstacles:
@@ -286,25 +310,47 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
     #             node.addNeighbor(Node(point2))
 
     for point in nodes.keys():
+        # if point.x != 80 or point.y != -140:
+            # continue
+        print "\n\n\n\n\n\n\n"
         nodes[point].removeIntersectingEdges(obstacles)
         print "\tNode %r has neighbors %r" % (nodes[point], nodes[point].neighbors)
+        print "\n\n\n\n\n\n\n"
+
 
     if algorithm == "a*":
         points_to_visit = aStarSearch(nodes[start], nodes[end])
     elif algorithm == "dfs":
-        points_to_visit, cost = depth_first_search(nodes[start], nodes[end])
+        # points_to_visit = depth_first_search(graph, nodes[start], nodes[end])
+        points_to_visit = depth_first_search(nodes[start], nodes[end])
+        # points_to_visit = bssf_path
         print "DFS Path: %r" % (points_to_visit)
     else:
         points_to_visit, cost = breadth_first_search(nodes[start], nodes[end])
     print "Returning from crappity_graphity:"
+
+    print "\n\n\n\n\n\n\n"
     print points_to_visit
+    print "\n\n\n\n\n\n\n"
+
     return points_to_visit
+
+# def depth_first_search(graph, start, goal):
+#     stack = [(start, [start])]
+#     while stack:
+#         (vertex, path) = stack.pop()
+#         for next in graph[vertex] - set(path):
+#             if next == goal:
+#                 yield path + [next]
+#             else:
+#                 stack.append((next, path + [next]))
 
 class BSSF:
     def __init__(self):
         self.value = float("inf")
 
     def update_value(self, new_value):
+        print "UPDATING BSSF VALUE TO %f" % new_value
         if new_value < self.value:
             self.value = new_value
             return True
@@ -313,48 +359,72 @@ class BSSF:
     def is_bssf(self, value_to_check):
         return value_to_check == self.value
 
+bssf = BSSF()
 
-def depth_first_search(start, goal, visited_nodes=set(), bssf=BSSF(), cost_so_far=0):
-    has_unvisited_neighbor = False
+
+def depth_first_search(start, goal, visited_nodes=set(), cost_so_far=0):
+    global bssf_cost
+    global bssf_path
+    global current_path
+
+    print "Visiting node %r" % start
     visited_nodes.add(start)
+    current_path.append(start)
 
     if start == goal:
-        bssf.update_value(cost_so_far)
-        return [start], cost_so_far
+        print "Goal state reached. cost_so_far: %f, bssf_cost: %f" % (cost_so_far, bssf_cost)
+        if cost_so_far < bssf_cost:
+            bssf_path = current_path[:]
+            print "BSSF path updated: %r" % bssf_path
+            bssf_cost = cost_so_far
+            current_path.pop()
+            return bssf_path
 
-    bssf_path = []
     for neighbor in start.neighbors:
         if neighbor not in visited_nodes:
-            has_unvisited_neighbor = True
-            path, cost = depth_first_search(neighbor, goal, visited_nodes, bssf, cost_so_far + dist_between(start, neighbor))
-            if bssf.is_bssf(cost):
-                bssf_path = [start] + path
-
-    if not has_unvisited_neighbor:
-        return [], float("inf")
-    else:
-        return bssf_path, bssf.value
+            depth_first_search(neighbor, goal, visited_nodes, cost_so_far + dist_between(start, neighbor))
+    current_path.pop()
+    return bssf_path
 
 def breadth_first_search(start, goal):
-    visited = set()
-    queue = [start]
-    solutions = []
+    global bssf_cost
+    global bssf_path
 
-    if not start.neighbors and start != goal:
-        return [], float("inf") #error
+    visited = set()
+    queue = [(start, 0, [start])]
 
     while queue:
         current = queue.pop(0)
-        visited.add(current)
-        if current == goal:
-            # do something, we're done searching but we need to see if there's a better solution
-            pass
-        else:
-            for neighbor in current.neighbors:
-                if neighbor not in visited:
-                    neighbor.cost = current.cost + dist_between(current, neighbor)
-                    queue.append(neighbor)
-    return [], float("inf")
+        current_node, cost = current[0], current[1]
+        visited.add(current_node)
+        if current_node == goal:
+            if cost < bssf_cost:
+                bssf_path = current[2][:]
+        for neighbor in current_node.neighbors:
+            if neighbor not in visited:
+                queue.append((neighbor, cost + dist_between(current, neighbor), current[2][:] + [neighbor]))
+    return bssf_path
+
+# def breadth_first_search(start, goal):
+#     visited = set()
+#     queue = [start]
+#     solutions = []
+#
+#     if not start.neighbors and start != goal:
+#         return [], float("inf") #error
+#
+#     while queue:
+#         current = queue.pop(0)
+#         visited.add(current)
+#         if current == goal:
+#             # do something, we're done searching but we need to see if there's a better solution
+#             pass
+#         else:
+#             for neighbor in current.neighbors:
+#                 if neighbor not in visited:
+#                     neighbor.cost = current.cost + dist_between(current, neighbor)
+#                     queue.append(neighbor)
+#     return [], float("inf")
 
 def dist_between(node1, node2):
     return math.sqrt((node1.point.x - node2.point.x)**2 + (node1.point.y - node2.point.y)**2)
@@ -463,6 +533,7 @@ class Agent(object):
                 # print "Tank %d moving to position %r from (%d, %d)" % (tank.index, self.paths[tank.index][0].point, tank.x, tank.y)
                 self.move_to_position(tank, self.paths[tank.index][0].point.x, self.paths[tank.index][0].point.y)
             break
+
         results = self.bzrc.do_commands(self.commands)
 
     def move_to_position(self, tank, target_x, target_y):
@@ -512,18 +583,18 @@ def main():
 
 
 if __name__ == '__main__':
-    # start = Node(Point(4, 0))
-    # a = Node(Point(2, 5))
-    # b = Node(Point(6, 5))
-    # c = Node(Point(6, 7))
-    # d = Node(Point(2, 7))
+    # start = Node(Point(2 - 400, 0))
+    # a = Node(Point(0 - 400, 5))
+    # b = Node(Point(6 - 400, 5))
+    # c = Node(Point(6 - 400, 7))
+    # d = Node(Point(0 - 400, 7))
     #
-    # e = Node(Point(3, 8))
-    # f = Node(Point(15, 8))
-    # g = Node(Point(15, 9))
-    # h = Node(Point(3, 9))
-    # end = Node(Point(4,10))
-    #
+    # e = Node(Point(3 - 400, 8))
+    # f = Node(Point(15 - 400, 8))
+    # g = Node(Point(15 - 400, 9))
+    # h = Node(Point(3 - 400, 9))
+    # end = Node(Point(4 - 400,10))
+
     # start.addNeighbor(a)
     # start.addNeighbor(b)
     # start.addNeighbor(c)
@@ -533,9 +604,11 @@ if __name__ == '__main__':
     # start.addNeighbor(g)
     # start.addNeighbor(h)
     # start.addNeighbor(end)
-    #
-    # obstacles = [[(2,5), (6,5), (6,7), (2,7)], [(3,8), (15,8), (15,9), (3,9)]]
-    #
+
+    # obstacles = [[(0 - 400,5), (6 - 400,5), (6 - 400,7), (0 - 400,7)], [(3 - 400,8), (15 - 400,8), (15 - 400,9), (3 - 400,9)]]
+
+    # print crappity_graphity(start.point, end.point, obstacles, "dfs")
+
     # start.removeIntersectingEdges(obstacles)
 
     main()
