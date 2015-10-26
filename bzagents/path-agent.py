@@ -23,6 +23,7 @@
 import sys
 import math
 import time
+import datetime
 import operator
 
 import uuid
@@ -31,6 +32,7 @@ from collections import defaultdict
 from bzrc import BZRC, Command
 from Queue import PriorityQueue
 
+from matplotlib import pyplot as plot
 
 current_id = 0
 bssf_cost = float("inf")
@@ -256,18 +258,20 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
 
         for corner in obstacle:
             x_coordinate, y_coordinate = corner
-            # if abs(corner[0]) != 400:
-            #     position = side(obstacle_center, (obstacle_center[0], obstacle_center[1] + 1), corner)
-            #     if position < 0:
-            #         x_coordinate -= 5
-            #     elif position > 0:
-            #         x_coordinate += 5
-            # if abs(corner[1]) != 400:
-            #     position = side(obstacle_center, (obstacle_center[0] + 1, obstacle_center[1]), corner)
-            #     if position < 0:
-            #         y_coordinate -= 5
-            #     elif position > 0:
-            #         y_coordinate += 5
+            if abs(corner[0]) != 400:
+                position = side(obstacle_center, (obstacle_center[0], obstacle_center[1] + 1), corner)
+                print "x position of %r relative to %r is %d" % (corner, obstacle_center, position)
+                if position > 0:
+                    x_coordinate -= 4
+                elif position < 0:
+                    x_coordinate += 4
+            if abs(corner[1]) != 400:
+                position = side(obstacle_center, (obstacle_center[0] + 1, obstacle_center[1]), corner)
+                print "y position of %r relative to %r is %d" % (corner, obstacle_center, position)
+                if position < 0:
+                    y_coordinate -= 4
+                elif position > 0:
+                    y_coordinate += 4
             points.append(Point(x_coordinate, y_coordinate))
 
     points.append(end)
@@ -289,8 +293,14 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
         nodes[point].removeIntersectingEdges(obstacles)
 
 
+    ################### PLOTTING CODE
+    # x_points = [-400,-400,400,400,-400]
+    # y_points = [400,-400,-400,400,400]
+    # plot.plot(x_points, y_points)
+    ##################################
+
     if algorithm == "a*":
-        points_to_visit = aStarSearch(nodes[start], nodes[end])
+        points_to_visit = aStarSearch(nodes[start], nodes[end], obstacles)
     elif algorithm == "dfs":
         # points_to_visit = depth_first_search(graph, nodes[start], nodes[end])
         points_to_visit = depth_first_search(nodes[start], nodes[end])
@@ -373,11 +383,15 @@ def dist_between(node1, node2):
 def heuristic_cost_estimate(start, goal):
     return dist_between(start, goal)
 
-def aStarSearch (start,goal):
+def aStarSearch (start, goal, obstacles):
+
+
     closedset = set()    # The set of nodes already evaluated.
     openset = set()    # The set of tentative nodes to be evaluated, initially containing the start node
     openset.add(start)
     came_from = {}    # The map of navigated nodes.
+
+
 
     g_score = defaultdict(lambda: float("inf")) #map with default value of Infinity
     g_score[start.id] = 0    # Cost from start along best known path.
@@ -387,20 +401,62 @@ def aStarSearch (start,goal):
 
     while openset: #this means there are nodes inthe openset still
         current = sorted(openset, key = lambda x: f_score[x.id])[0] #TODO - make this sort correctly
-        print "A* Visiting Node: %r" % current
+
+        # PLOT STUFF
+        x_points = [-400,-400,400,400,-400]
+        y_points = [400,-400,-400,400,400]
+        plot.plot(x_points, y_points)
+
+        # graph the obstacles as well
+        for obstacle in obstacles:
+            x_points = []
+            y_points = []
+            for corner in obstacle:
+                x_points.append(corner[0])
+                y_points.append(corner[1])
+            x_points.append(x_points[0])
+            y_points.append(y_points[0])
+            plot.plot(x_points, y_points, color="black")
+
+        #plot all of the visited nodes
+        x_points = []
+        y_points = []
+        for node in closedset:
+            x_points.append(node.point.x)
+            y_points.append(node.point.y)
+        plot.plot(x_points, y_points, 'bs')
+
+        # also plot the search frontier
+        x_points = []
+        y_points = []
+        for node in openset:
+            x_points.append(node.point.x)
+            y_points.append(node.point.y)
+        plot.plot(x_points, y_points, 'r^')
+
+        # get a timestamp so that the figures all have unique names and don't overwrite each other
+        ts = time.time()
+        time_string = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+
+
+
+
         if current == goal:
-            print "A* goal state reached"
-            print "\tCame from: %r" % came_from
+            return_path = reconstruct_path(come_from, goal)
             return reconstruct_path(came_from, goal)
+
+
+        plot.savefig("a-star-%s.png" % time_string)
+        #close the plot so that there's a new one on the next iteration
+        plot.close()
+
 
         #remove current from openset
         openset.remove(current)
         #add current to closedset
         closedset.add(current)
         #expanding the horizon here
-        print "Neighbors: %r" % current.neighbors
         for neighbor in current.neighbors:
-            print "Considering %r" % neighbor
             if neighbor in closedset:
                 continue
 
@@ -420,10 +476,8 @@ def aStarSearch (start,goal):
 def reconstruct_path(came_from,current):
     total_path = [current]
     while current.id in came_from:
-        print "\tRetracing: %r" % total_path
         current = came_from[current.id]
         total_path.append(current)
-    print "Retraced: %r" % total_path
     return total_path[::-1]
 
 class Agent(object):
