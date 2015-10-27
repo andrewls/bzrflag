@@ -260,14 +260,14 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
             x_coordinate, y_coordinate = corner
             if abs(corner[0]) != 400:
                 position = side(obstacle_center, (obstacle_center[0], obstacle_center[1] + 1), corner)
-                print "x position of %r relative to %r is %d" % (corner, obstacle_center, position)
+                # print "x position of %r relative to %r is %d" % (corner, obstacle_center, position)
                 if position > 0:
                     x_coordinate -= 4
                 elif position < 0:
                     x_coordinate += 4
             if abs(corner[1]) != 400:
                 position = side(obstacle_center, (obstacle_center[0] + 1, obstacle_center[1]), corner)
-                print "y position of %r relative to %r is %d" % (corner, obstacle_center, position)
+                # print "y position of %r relative to %r is %d" % (corner, obstacle_center, position)
                 if position < 0:
                     y_coordinate -= 4
                 elif position > 0:
@@ -303,12 +303,12 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
         points_to_visit = aStarSearch(nodes[start], nodes[end], obstacles)
     elif algorithm == "dfs":
         # points_to_visit = depth_first_search(graph, nodes[start], nodes[end])
-        points_to_visit = depth_first_search(nodes[start], nodes[end])
+        points_to_visit = depth_first_search(nodes[start], nodes[end], obstacles)
         # points_to_visit = bssf_path
-        print "DFS Path: %r" % (points_to_visit)
+        # print "DFS Path: %r" % (points_to_visit)
     else:
-        print "Running breadth first search"
-        points_to_visit = breadth_first_search(nodes[start], nodes[end])
+        # print "Running breadth first search"
+        points_to_visit = breadth_first_search(nodes[start], nodes[end], obstacles)
     print "Returning from crappity_graphity:"
     print points_to_visit
     return points_to_visit
@@ -331,31 +331,69 @@ class BSSF:
 bssf = BSSF()
 
 
-def depth_first_search(start, goal, visited_nodes=set(), cost_so_far=0):
+def depth_first_search(start, goal, obstacles, visited_nodes=set(), cost_so_far=0):
     global bssf_cost
     global bssf_path
     global current_path
 
-    print "Visiting node %r" % start
+    x_points = [-400,-400,400,400,-400]
+    y_points = [400,-400,-400,400,400]
+    plot.plot(x_points, y_points)
+
+    # graph the obstacles as well
+    for obstacle in obstacles:
+        x_points = []
+        y_points = []
+        for corner in obstacle:
+            x_points.append(corner[0])
+            y_points.append(corner[1])
+        x_points.append(x_points[0])
+        y_points.append(y_points[0])
+        plot.plot(x_points, y_points, color="black")
+
+    # plot the visited nodes
+    x_points = []
+    y_points = []
+    for node in visited_nodes:
+        x_points.append(node.point.x)
+        y_points.append(node.point.y)
+    plot.plot(x_points, y_points, 'bs')
+
+    # the current frontier are the neighbors of the current node
+    x_points = []
+    y_points = []
+    for node in start.neighbors:
+        x_points.append(node.point.x)
+        y_points.append(node.point.y)
+    if x_points:
+        plot.plot(x_points, y_points, 'r^')
+
+    ts = time.time()
+    time_string = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+    # plot.savefig("dfs-%s.png" % time_string)
+    #close the plot so that there's a new one on the next iteration
+    plot.close()
+
+    # print "Visiting node %r" % start
     visited_nodes.add(start)
     current_path.append(start)
 
     if start == goal:
-        print "Goal state reached. cost_so_far: %f, bssf_cost: %f" % (cost_so_far, bssf_cost)
+        # print "Goal state reached. cost_so_far: %f, bssf_cost: %f" % (cost_so_far, bssf_cost)
         if cost_so_far < bssf_cost:
             bssf_path = current_path[:]
-            print "BSSF path updated: %r" % bssf_path
+            # print "BSSF path updated: %r" % bssf_path
             bssf_cost = cost_so_far
             current_path.pop()
             return bssf_path
 
     for neighbor in start.neighbors:
         if neighbor not in visited_nodes:
-            depth_first_search(neighbor, goal, visited_nodes, cost_so_far + dist_between(start, neighbor))
+            depth_first_search(neighbor, goal, obstacles, visited_nodes, cost_so_far + dist_between(start, neighbor))
     current_path.pop()
     return bssf_path
 
-def breadth_first_search(start, goal):
+def breadth_first_search(start, goal, obstacles):
     global bssf_cost
     global bssf_path
 
@@ -368,6 +406,57 @@ def breadth_first_search(start, goal):
         current_node, cost, current_path = current[1], current[0], current[2]
         if current_node in visited:
             continue
+
+
+        x_points = [-400,-400,400,400,-400]
+        y_points = [400,-400,-400,400,400]
+        plot.plot(x_points, y_points)
+
+        # graph the obstacles as well
+        for obstacle in obstacles:
+            x_points = []
+            y_points = []
+            for corner in obstacle:
+                x_points.append(corner[0])
+                y_points.append(corner[1])
+            x_points.append(x_points[0])
+            y_points.append(y_points[0])
+            plot.plot(x_points, y_points, color="black")
+
+        # plot the visited nodes
+        x_points = []
+        y_points = []
+        for node in visited:
+            x_points.append(node.point.x)
+            y_points.append(node.point.y)
+        plot.plot(x_points, y_points, 'bs')
+
+        # the current frontier are the nodes still in the queue
+        x_points = []
+        y_points = []
+        queue_copy = []
+        # print "Entering queue loop"
+        # print queue
+        while queue.qsize():
+            # print "Right before the get, length is %d" % queue.qsize()
+            node = queue.get()
+            # print "Got cost %r with node %r and path %r" % node
+            x_points.append(node[1].point.x)
+            y_points.append(node[1].point.y)
+            queue_copy.append(node)
+        # print "Done getting nodes"
+        for node in queue_copy:
+            queue.put(node)
+        if x_points:
+            plot.plot(x_points, y_points, 'r^')
+
+        ts = time.time()
+        time_string = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+        # plot.savefig("bfs-%s.png" % time_string)
+        #close the plot so that there's a new one on the next iteration
+        plot.close()
+
+
         visited.add(current_node)
         if current_node == goal:
             if cost < bssf_cost:
@@ -400,6 +489,7 @@ def aStarSearch (start, goal, obstacles):
     f_score[start.id] = heuristic_cost_estimate(start, goal)
 
     while openset: #this means there are nodes inthe openset still
+        # print "Creating plot for a *"
         current = sorted(openset, key = lambda x: f_score[x.id])[0] #TODO - make this sort correctly
 
         # PLOT STUFF
@@ -441,12 +531,22 @@ def aStarSearch (start, goal, obstacles):
 
 
 
+
         if current == goal:
-            return_path = reconstruct_path(come_from, goal)
+            return_path = reconstruct_path(came_from, goal)
+            x_points = []
+            y_points = []
+            for node in return_path:
+                x_points.append(node.point.x)
+                y_points.append(node.point.y)
+            plot.plot(x_points, y_points, color="blue")
+            # plot.savefig("a-star-%s.png" % time_string)
+            #close the plot so that there's a new one on the next iteration
+            plot.close()
             return reconstruct_path(came_from, goal)
 
 
-        plot.savefig("a-star-%s.png" % time_string)
+        # plot.savefig("a-star-%s.png" % time_string)
         #close the plot so that there's a new one on the next iteration
         plot.close()
 
@@ -516,7 +616,7 @@ class Agent(object):
                         min_distance = math.sqrt((tank.x - flag.x)**2 + (tank.y - flag.y)**2)
                         closest_flag = flag
                 goal_point = Point(closest_flag.x, closest_flag.y)
-                self.paths[tank.index] = crappity_graphity(starting_point, goal_point, self.obstacles, "a*")
+                self.paths[tank.index] = crappity_graphity(starting_point, goal_point, self.obstacles, "bfs")
 
             # check to see if we're within a threshold distance of the next point
             if math.sqrt((tank.x - self.paths[tank.index][0].point.x)**2 + (tank.y - self.paths[tank.index][0].point.y)**2) < 25:
