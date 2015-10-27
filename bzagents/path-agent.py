@@ -575,9 +575,12 @@ def aStarSearch (start, goal, obstacles):
 #TODO does this work out of the box? It just might...
 def reconstruct_path(came_from,current):
     total_path = [current]
+    total_distance = 0
     while current.id in came_from:
+        total_distance += dist_between(current, came_from[current.id])
         current = came_from[current.id]
         total_path.append(current)
+    print "The total path cost was %f" % total_distance
     return total_path[::-1]
 
 class Agent(object):
@@ -616,7 +619,7 @@ class Agent(object):
                         min_distance = math.sqrt((tank.x - flag.x)**2 + (tank.y - flag.y)**2)
                         closest_flag = flag
                 goal_point = Point(closest_flag.x, closest_flag.y)
-                self.paths[tank.index] = crappity_graphity(starting_point, goal_point, self.obstacles, "bfs")
+                self.paths[tank.index] = crappity_graphity(starting_point, goal_point, self.obstacles, "a*")
 
             # check to see if we're within a threshold distance of the next point
             if math.sqrt((tank.x - self.paths[tank.index][0].point.x)**2 + (tank.y - self.paths[tank.index][0].point.y)**2) < 25:
