@@ -292,12 +292,27 @@ def crappity_graphity(start, end, obstacles, algorithm="a*"):
     for point in nodes.keys():
         nodes[point].removeIntersectingEdges(obstacles)
 
+    # plot the actual visibility graph
+    plot.plot([-400,-400,400,400,-400], [400,-400,-400,400,400], color="black")
+    for obstacle in obstacles:
+        x = []
+        y = []
+        for corner in obstacle:
+            x.append(corner[0])
+            y.append(corner[1])
+        x.append(x[0])
+        y.append(y[0])
+        plot.plot(x, y, color="black")
 
-    ################### PLOTTING CODE
-    # x_points = [-400,-400,400,400,-400]
-    # y_points = [400,-400,-400,400,400]
-    # plot.plot(x_points, y_points)
-    ##################################
+    for key in nodes.keys():
+        node = nodes[key]
+        for end_node in node.neighbors:
+            x = [node.point.x, end_node.point.x]
+            y = [node.point.y, end_node.point.y]
+            plot.plot(x,y, color="blue")
+    plot.savefig("visibility-graph.png")
+    plot.close()
+
 
     if algorithm == "a*":
         points_to_visit = aStarSearch(nodes[start], nodes[end], obstacles)
