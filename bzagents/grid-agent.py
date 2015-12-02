@@ -49,7 +49,7 @@ class Agent(object):
         self.iterations = 0
 
         # initialize the global occupancy grid
-        self.grid = [[0.4 for i in range(int(self.constants["worldsize"]))] for j in range(int(self.constants["worldsize"]))]
+        self.grid = [[0.4 for i in range(int(self.constants["worldsize"])/20)] for j in range(int(self.constants["worldsize"])/20)]
 
         grid_filter_gl.init_window(int(self.constants["worldsize"]), int(self.constants["worldsize"]))
         print self.constants
@@ -142,7 +142,7 @@ class Agent(object):
             #     if found_unexplored_point:
             #         break
             for i in range(len(self.grid)):
-                self.flags = self.flags + [(i - 400, j - 400) for j in range(len(self.grid[i])) if self.grid[i][j] > 0.2 and self.grid[i][j] < 0.8]
+                self.flags = self.flags + [(i - 400 + (i * 20), j - 400 + (j * 20)) for j in range(len(self.grid[i])) if self.grid[i][j] > 0.2 and self.grid[i][j] < 0.8]
             found_unexplored_point = False
             for flag in self.flags:
                 distance_to_flag = math.sqrt((flag[0] - x)**2 + (flag[1] - y)**2)
