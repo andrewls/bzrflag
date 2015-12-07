@@ -24,7 +24,12 @@ import sys
 import math
 import time
 
+import numpy
+
 from bzrc import BZRC, Command
+
+TIME_BETWEEN_TICKS = 0.1
+C_VALUE = 0
 
 class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
@@ -33,6 +38,23 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
+        self.time_diff = 0
+        self.mu = numpy.matrix([[0,0,0,0,0,0]]).transpose()
+        self.sigma_t = numpy.matrix([[100, 0, 0, 0, 0, 0],
+                                     [0, 0.1, 0, 0, 0, 0],
+                                     [0, 0, 0.1, 0, 0, 0],
+                                     [0, 0, 0, 100, 0, 0],
+                                     [0, 0, 0, 0, 0.1, 0],
+                                     [0, 0, 0, 0, 0, 0.1]])
+        self.F = numpy.matrix([[1, TIME_BETWEEN_TICKS, TIME_BETWEEN_TICKS**2, 0, 0, 0],
+                               [0, 1, TIME_BETWEEN_TICKS, 0, 0, 0],
+                               [0, -C_VALUE, 1, 0, 0, 0],
+                               [0, 0, 0, 1, TIME_BETWEEN_TICKS, TIME_BETWEEN_TICKS**2],
+                               [0, 0, 0, 0, 1, TIME_BETWEEN_TICKS],
+                               [0, 0, 0, 0, -C_VALUE, 1]])
+        self.F_Transpose = self.F.transpose()
+
+
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
@@ -45,6 +67,13 @@ class Agent(object):
                         self.constants['team']]
 
         self.commands = []
+        self.time_diff += time_diff
+
+        if self.time_diff > TIME_BETWEEN_TICKS:
+            self.time_diff = 0
+            print "Updating the kalman values."
+
+        print time_diff
 
         # for tank in mytanks:
             # self.attack_enemies(tank)
@@ -108,6 +137,7 @@ def main():
     try:
         while True:
             time_diff = time.time() - prev_time
+            prev_time = time.time()
             agent.tick(time_diff)
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
