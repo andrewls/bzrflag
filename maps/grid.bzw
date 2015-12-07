@@ -1,0 +1,59 @@
+# World built with bzedit, available at
+# http://bzedit.bolognia.net/
+
+#!name base-0
+base
+position -370 0 0
+rotation 0
+size 30 30 0
+color 1
+end
+
+#!name base-1
+base
+position 370 0 0
+rotation 0
+size 30 30 0
+color 2
+end
+
+# eyes
+box
+position -100 100 0
+rotation 0
+size 40 40 10
+end
+
+box
+position 100 100 0
+rotation 0
+size 40 40 10
+end
+
+# eyebrows
+box
+position -100 220 0
+rotation 0
+size 60 20 10
+end
+
+box
+position 100 220 0
+rotation 0
+size 60 20 10
+end
+
+# nose
+box
+position 0 -40 0
+rotation 0
+size 30 50 10
+end
+
+# mouth
+box
+position 0 -200 0
+rotation 0
+size 150 20 10
+end
+
