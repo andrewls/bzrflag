@@ -48,6 +48,7 @@ class Agent(object):
         self.commands = []
 
         for tank in mytanks:
+            print "Blue tank position: (%d, %d)" % (tank.x, tank.y)
             if abs(tank.angle) > math.pi/4:
                 if self.iterations == 0:
                     self.commands.append(Command(tank.index, 0, random.randrange(-5, 5), 0)) # turn so we're moving towards the other agent

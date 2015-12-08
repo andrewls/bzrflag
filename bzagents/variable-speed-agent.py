@@ -34,6 +34,7 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
+        self.iterations = 0
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
@@ -44,27 +45,23 @@ class Agent(object):
         self.shots = shots
         self.enemies = [tank for tank in othertanks if tank.color !=
                         self.constants['team']]
-        self.iterations = 1
         self.commands = []
 
         for tank in mytanks:
-            if abs(tank.angle) > math.pi/4:
+            if abs(tank.angle) > math.pi/4 and self.iterations < 50:
                 if self.iterations == 0:
+                    self.angval = random.randrange(-5, 5) * 10
                     self.commands.append(Command(tank.index, 0, random.randrange(-5, 5) * 10, 0)) # turn so we're moving towards the other agent
             else:
-                speed = random.uniform(-0.5, 1.3)
-                angval = self.turn() if self.iterations % 500 == 0 else 0
-                print speed
-                self.commands.append(Command(tank.index, speed, angval, 0))  # just move in a straignt line
-            # if self.iterations % 500 == 0:
-            #     turn = True if random.randrange(0, 100) > 50 else False
-            #     if turn:
-            #         self.turn_sixty_degrees(tank)
+                speed = random.uniform(0.2, 1.3)
+                if self.iterations % 50 == 0:
+                    self.angval = self.turn(tank)
+                self.commands.append(Command(tank.index, speed, self.angval, 0))  # just move in a straignt line
 
         results = self.bzrc.do_commands(self.commands)
         self.iterations += 1
 
-    def turn_sixty_degrees(self, tank):
+    def turn(self, tank):
         amountToTurn = 1 if random.randrange(0, 100) > 50 else -1
         return (math.pi / 3) * amountToTurn
 
