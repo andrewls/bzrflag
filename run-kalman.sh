@@ -2,5 +2,5 @@
 sleep 2
 python bzagents/kalman-agent.py localhost 50100 &
 # python bzagents/sitting-duck-agent.py localhost 50101 &
-# python bzagents/constant-clay-pigeon.py localhost 50101 &
-python bzagents/variable-speed-agent.py localhost 50101 &
+python bzagents/constant-clay-pigeon.py localhost 50101 &
+# python bzagents/variable-speed-agent.py localhost 50101 &

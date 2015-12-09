@@ -117,6 +117,8 @@ class Agent(object):
                 # figure out how long it will take the shot to actually reach the enemy tank
                 distance_from_tank_to_target = math.sqrt((mu_to_aim_for[0,0] - tank.x)**2 + (mu_to_aim_for[3,0] - tank.y)**2)
                 time_for_shot_to_reach_enemy_tank = distance_from_tank_to_target / SHOT_SPEED
+                if time_for_shot_to_reach_enemy_tank > 1.5:
+                    time_for_shot_to_reach_enemy_tank /= 1.5
                 print "Time for shot to reach enemy tank: %f" % time_for_shot_to_reach_enemy_tank
                 # and now shoot at the current position, plus however far it can get in the amount of time it will take to reach it.
                 self.target_angle = math.atan2(mu_to_aim_for[0,0] + mu_to_aim_for[1,0] * time_for_shot_to_reach_enemy_tank - tank.y, mu_to_aim_for[3,0] + mu_to_aim_for[4,0] * time_for_shot_to_reach_enemy_tank - tank.x) * -1 + math.pi/2
