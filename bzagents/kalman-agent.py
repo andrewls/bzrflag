@@ -109,6 +109,8 @@ class Agent(object):
                     print "Updating kalman values"
                     self.kalman_update(numpy.matrix([[tank.x],[tank.y]]))
                     print "New estimates: %r" % self.mu
+                if self.iterations % 50 == 0:
+                    self.gnuplotThatShiz()
 
             for tank in mytanks:
                 # first figure out where the enemy tank is
@@ -118,7 +120,12 @@ class Agent(object):
                 # figure out how long it will take the shot to actually reach the enemy tank
                 distance_from_tank_to_target = math.sqrt((mu_to_aim_for[0,0] - tank.x)**2 + (mu_to_aim_for[3,0] - tank.y)**2)
                 time_for_shot_to_reach_enemy_tank = distance_from_tank_to_target / SHOT_SPEED
-                if time_for_shot_to_reach_enemy_tank > 1.5:
+
+                if time_for_shot_to_reach_enemy_tank < 0.5:
+                    time_for_shot_to_reach_enemy_tank /= 1.2
+                elif time_for_shot_to_reach_enemy_tank > 2.5:
+                    time_for_shot_to_reach_enemy_tank /= 1.2
+                else:
                     time_for_shot_to_reach_enemy_tank /= 1.5
                 print "Time for shot to reach enemy tank: %f" % time_for_shot_to_reach_enemy_tank
                 # and now shoot at the current position, plus however far it can get in the amount of time it will take to reach it.
@@ -143,7 +150,7 @@ class Agent(object):
             # self.attack_enemies(tank)
 
         results = self.bzrc.do_commands(self.commands)
-        self.iterations
+        self.iterations += 1
 
     def attack_enemies(self, tank):
         """Find the closest enemy and chase it, shooting as you go."""
@@ -180,7 +187,7 @@ class Agent(object):
         return angle
 
     def gnuplotThatShiz(self):
-        f = open('tmp.gp', 'w')
+        f = open('visualizations/tmp.gp', 'w')
 
         f.write( "set xrange [-400.0: 400.0] \n\
         set yrange [-400.0: 400.0] \n\
@@ -199,18 +206,20 @@ class Agent(object):
         set arrow from 300, 100 to 200, 100 nohead front lt 3 \n\
         set palette model RGB functions 1-gray, 1-gray, 1-gray \n\
         set isosamples 100 \n\
-        sigma_x = 70 \n\
-        sigma_y = 100 \n\
-        rho = 0.3 \n\
+        mu_x = -%f \n\
+        mu_y = -%f \n\
+        sigma_x = %f \n\
+        sigma_y = %f \n\
+        rho = %f \n\
         splot 1.0/(2.0 * pi * sigma_x * sigma_y * sqrt(1 - rho**2) )\
-        * exp(-1.0/2.0 * (x**2 / sigma_x**2 + y**2 / sigma_y**2\
-        - 2.0*rho*x*y/(sigma_x*sigma_y) ) ) with pm3d\n\
+        * exp(-1.0/2.0 * ((x+mu_x)**2 / sigma_x**2 + (y+mu_y)**2 / sigma_y**2\
+        - 2.0*rho*(x + mu_x)*(y + mu_y)/(sigma_x*sigma_y) ) ) with pm3d\n\
         set term png\n\
-        set output \"blah.png\"\n\
-        replot")
+        set output \"visualizations/kalman_%f.png\"\n\
+        replot" % (self.mu[0,0], self.mu[3,0], self.sigma_t[0,0], self.sigma_t[3,3], self.sigma_t[0,3], time.time()))
 
         f.close()
-        system('gnuplot tmp.gp')
+        system('gnuplot visualizations/tmp.gp')
 
 
 def main():
