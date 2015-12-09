@@ -27,6 +27,7 @@ import time
 import numpy
 
 from bzrc import BZRC, Command
+from os import system
 from constants import SHOTSPEED
 
 TIME_BETWEEN_TICKS = 0.1
@@ -175,6 +176,39 @@ class Agent(object):
         elif angle > math.pi:
             angle -= 2 * math.pi
         return angle
+
+    def gnuplotThatShiz(self):
+        f = open('tmp.gp', 'w')
+
+        f.write( "set xrange [-400.0: 400.0] \n\
+        set yrange [-400.0: 400.0] \n\
+        set pm3d \n\
+        set view map \n\
+        unset key \n\
+        set size square \n\
+        unset arrow \n\
+        set arrow from 0, 0 to -150, 0 nohead front lt 3 \n\
+        set arrow from -150, 0 to -150, -50 nohead front lt 3 \n\
+        set arrow from -150, -50 to 0, -50 nohead front lt 3 \n\
+        set arrow from 0, -50 to 0, 0 nohead front lt 3 \n\
+        set arrow from 200, 100 to 200, 330 nohead front lt 3 \n\
+        set arrow from 200, 330 to 300, 330 nohead front lt 3 \n\
+        set arrow from 300, 330 to 300, 100 nohead front lt 3 \n\
+        set arrow from 300, 100 to 200, 100 nohead front lt 3 \n\
+        set palette model RGB functions 1-gray, 1-gray, 1-gray \n\
+        set isosamples 100 \n\
+        sigma_x = 70 \n\
+        sigma_y = 100 \n\
+        rho = 0.3 \n\
+        splot 1.0/(2.0 * pi * sigma_x * sigma_y * sqrt(1 - rho**2) )\
+        * exp(-1.0/2.0 * (x**2 / sigma_x**2 + y**2 / sigma_y**2\
+        - 2.0*rho*x*y/(sigma_x*sigma_y) ) ) with pm3d\n\
+        set term png\n\
+        set output \"blah.png\"\n\
+        replot")
+
+        f.close()
+        system('gnuplot tmp.gp')
 
 
 def main():
